@@ -52,8 +52,8 @@ class MainActivity : Activity() {
 
     private fun createKoolContext(): KoolContextAndroid {
         koolCtx = createDefaultKoolContext()
-
         koolCtx.scenes += mainMenuScene()
+        koolCtx.scenes += mainMenuSceneUI()
 
         val dbgOv = DebugOverlay()
         dbgOv.isExpanded.set(true)
