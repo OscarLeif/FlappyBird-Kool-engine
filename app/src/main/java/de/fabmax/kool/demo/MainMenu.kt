@@ -1,5 +1,6 @@
 package de.fabmax.kool.demo
 
+import android.widget.Toast
 import de.fabmax.kool.Assets
 import de.fabmax.kool.loadTexture2d
 import de.fabmax.kool.math.Vec3d
@@ -11,6 +12,7 @@ import de.fabmax.kool.modules.ui2.AlignmentX
 import de.fabmax.kool.modules.ui2.AlignmentY
 import de.fabmax.kool.modules.ui2.Button
 import de.fabmax.kool.modules.ui2.Colors
+import de.fabmax.kool.modules.ui2.Dimension
 import de.fabmax.kool.modules.ui2.Image
 import de.fabmax.kool.modules.ui2.RectBackground
 import de.fabmax.kool.modules.ui2.RoundRectBackground
@@ -19,6 +21,7 @@ import de.fabmax.kool.modules.ui2.UiScene
 import de.fabmax.kool.modules.ui2.addPanelSurface
 import de.fabmax.kool.modules.ui2.align
 import de.fabmax.kool.modules.ui2.alignX
+import de.fabmax.kool.modules.ui2.alignY
 import de.fabmax.kool.modules.ui2.background
 import de.fabmax.kool.modules.ui2.font
 import de.fabmax.kool.modules.ui2.margin
@@ -31,6 +34,7 @@ import de.fabmax.kool.pipeline.MipMapping
 import de.fabmax.kool.pipeline.SamplerSettings
 import de.fabmax.kool.pipeline.TexFormat
 import de.fabmax.kool.pipeline.Texture2d
+import de.fabmax.kool.platform.KoolContextAndroid
 import de.fabmax.kool.platform.imageAtlasTextureData
 import de.fabmax.kool.scene.Mesh
 import de.fabmax.kool.scene.OrthographicCamera
@@ -50,10 +54,9 @@ import kotlin.math.max
 val groundWidth = 33.6f   // scale of base.png (336px / 10)
 val groundHeight = 11.2f  // scale of base.png (112px / 10)
 val scrollSpeed = 10f     // units per second (tweak until it feels right)
-
 val groundMeshes = mutableListOf<Mesh>()
 
-fun mainMenuSceneUI(): Scene= UiScene("MainMenu"){
+fun mainMenuSceneUI(): Scene= UiScene("MainMenuUI"){
         // setup UI layer
         //setupUiScene(Scene.DEFAULT_CLEAR_COLOR as ClearColor)
     coroutineScope.launch {
@@ -62,19 +65,29 @@ fun mainMenuSceneUI(): Scene= UiScene("MainMenu"){
         val titleTex =loadUiTexture("sprites/title.png")
 
         addPanelSurface {
-            // Title at the top
-            Image(titleTex) {
-                modifier
-                    .size(150.dp, 100.dp)
-                    .alignX(AlignmentX.Center)
-                    .margin(top = 16.dp, bottom = 24.dp)
-            }
+
             modifier
-                .size(300.dp, 400.dp)
-                .align(AlignmentX.Center, AlignmentY.Center)
+                .size(300.dp, 100.dp)
+                .align(AlignmentX.Center, AlignmentY.Top)
 //                .background(RoundRectBackground(colors.background, 16.dp))
                 .background(null) //transparent
 
+            // Title at the top
+            Image(titleTex) {
+                modifier
+                    .size(250.dp, 100.dp)
+                    .alignX(AlignmentX.Center)
+                    .margin(top = 16.dp, bottom = 24.dp)
+            }
+        }
+
+        addPanelSurface {
+
+            modifier
+                .size(width  = 250.dp, height = 100.dp)
+                .alignX(AlignmentX.Center)
+                .alignY(AlignmentY.Bottom)
+                .margin(bottom = 48.dp)
 
             Row {
                 modifier
@@ -84,7 +97,10 @@ fun mainMenuSceneUI(): Scene= UiScene("MainMenu"){
                 Image(playBtnTex) {
                     modifier
                         .size(120.dp, 60.dp)
-                        .onClick { println("Start clicked") }
+                        .onClick {
+                            println("Start clicked")
+                            SceneManager.loadGameScene()
+                        }
                 }
 
                 Image(leaderboardTex) {
@@ -95,11 +111,11 @@ fun mainMenuSceneUI(): Scene= UiScene("MainMenu"){
             }
         }
     }
-}
+    }
 
-fun mainMenuScene(): Scene = scene {
+fun mainMenuScene(): Scene = scene("MainMenu") {
     // this runs immediately when scene is created
-    //defaultOrbitCamera()
+//    defaultOrbitCamera()
     camera = OrthographicCamera().apply {
         setCentered(height = 51.2f, near = -100f,far = 100f)
     }
@@ -131,8 +147,8 @@ fun mainMenuScene(): Scene = scene {
             }
         }
 
-        // ground meshes
-        repeat(3) { i ->
+        // ground meshes 5 units was enough for landscape
+        repeat(5) { i ->
             val ground = addTextureMesh {
                 generate {
                     rect { size.set(groundWidth, groundHeight) }
@@ -144,8 +160,6 @@ fun mainMenuScene(): Scene = scene {
             ground.transform.translate(i * groundWidth - groundWidth / 2, -25.6f, 0f)
             groundMeshes += ground
         }
-
-
     }
 
     // this is attached to the scene itself, so it runs every frame
@@ -155,10 +169,10 @@ fun mainMenuScene(): Scene = scene {
             ground.transform.translate(-scrollSpeed * dt, 0f, 0f)
         }
 
-        //review if the position is not beyonf the limit
+        //review if the position is not beyond the limit
         for (ground in groundMeshes) {
             //I assume the pivot is 0.5,0.5
-            if (ground.transform.getTranslationF().x < -28.8f) {
+            if (ground.transform.getTranslationF().x < -groundWidth*2) {
                 //search the fartest
                 var fartest = groundMeshes.first()
                 for (m in groundMeshes) {

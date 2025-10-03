@@ -26,8 +26,11 @@ import de.fabmax.kool.util.Time
 import kotlinx.coroutines.launch
 import kotlin.math.sin
 class MainActivity : Activity() {
-
     lateinit var koolCtx: KoolContextAndroid
+
+    private lateinit var mainMenuScene: Scene
+    private lateinit var mainMenuUI: Scene
+    private lateinit var gameScene: Scene
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,8 +55,13 @@ class MainActivity : Activity() {
 
     private fun createKoolContext(): KoolContextAndroid {
         koolCtx = createDefaultKoolContext()
-        koolCtx.scenes += mainMenuScene()
-        koolCtx.scenes += mainMenuSceneUI()
+        SceneManager.koolCtx = koolCtx
+
+        SceneManager.mainMenuScene = mainMenuScene()
+        SceneManager.mainMenuUI= mainMenuSceneUI()
+
+        koolCtx.scenes += SceneManager.mainMenuScene!!
+        koolCtx.scenes += SceneManager.mainMenuUI!!
 
         val dbgOv = DebugOverlay()
         dbgOv.isExpanded.set(true)
