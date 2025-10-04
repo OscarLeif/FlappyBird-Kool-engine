@@ -1,6 +1,7 @@
 package de.fabmax.kool.demo
 
 import de.fabmax.kool.demo.SceneManager.gameSceneUIGameOver
+import de.fabmax.kool.modules.ui2.MutableStateValue
 import de.fabmax.kool.platform.KoolContextAndroid
 import de.fabmax.kool.scene.Scene
 

@@ -1,7 +1,6 @@
 //file Game.kt
 package de.fabmax.kool.demo
 
-import android.R
 import de.fabmax.kool.Assets
 import de.fabmax.kool.input.Input
 import de.fabmax.kool.loadTexture2d
@@ -13,7 +12,6 @@ import de.fabmax.kool.modules.ui2.Column
 import de.fabmax.kool.modules.ui2.Image
 import de.fabmax.kool.modules.ui2.Row
 import de.fabmax.kool.modules.ui2.Text
-import de.fabmax.kool.modules.ui2.TextNode
 import de.fabmax.kool.modules.ui2.UiScene
 import de.fabmax.kool.modules.ui2.addPanelSurface
 import de.fabmax.kool.modules.ui2.align
@@ -33,9 +31,11 @@ import de.fabmax.kool.scene.addTextureMesh
 import de.fabmax.kool.scene.scene
 import de.fabmax.kool.util.Time
 import kotlinx.coroutines.launch
-import de.fabmax.kool.modules.ui2.Text
 import de.fabmax.kool.modules.ui2.TextScope
-import de.fabmax.kool.modules.ui2.UiScope
+import de.fabmax.kool.modules.ui2.alignY
+import de.fabmax.kool.modules.ui2.mutableStateOf
+import de.fabmax.kool.modules.ui2.textColor
+import de.fabmax.kool.toString
 
 var gameGroundMeshes = mutableListOf<Mesh>()
 val birdWidth = 3.24f
@@ -71,17 +71,15 @@ var pipeTex: Texture2d?=null
 
 data class PipePair(val bottom: Node, val top: Node, var scored: Boolean = false)
 val pipePairs = mutableListOf<PipePair>()
+var scoreText = mutableStateOf("")
 var score = 0
 
-object GameUI {
-    var scoreLabel: TextScope? = null
-}
+//object GameUI {
+//    var scoreLabel: TextScope? = null
+//}
 
 //the UI
 fun gameHudScene(): Scene = UiScene("GameHud") {
-
-    var scoreTex: TextScope
-
     coroutineScope.launch {
 
         //suppose to be the counter label
@@ -90,12 +88,15 @@ fun gameHudScene(): Scene = UiScene("GameHud") {
                 .size(150.dp, 80.dp)
                 .align(AlignmentX.Center, AlignmentY.Top)
                 .margin(top = 12.dp)
-
-
-            GameUI.scoreLabel = Text("0") {
+            //wait is this called every frame ?
+            //score++;
+            scoreText.set(score.toString())
+            Text(scoreText.use()) {
                 modifier
                     //.fontSize(32.dp)
+                    .textColor(colors.primary)
                     .alignX(AlignmentX.Center)
+                    .alignY(AlignmentY.Center)
             }
         }
     }
@@ -322,7 +323,7 @@ fun gameScene(): Scene = scene("Game")
             birdY = groundLevel + birdHeight / 2f   // snap bird onto ground
             velocity = 0f                           // stop falling
             gameOver = true                         // or trigger restart
-            SceneManager.gameSceneUIGameOver?.isVisible=true;
+            SceneManager.gameSceneUIGameOver?.isVisible = true;
         }
         birdRef?.transform?.setPosition(groundWidth * -0.25f, birdY, 1f)
         val iterator = pipeMeshes.iterator()
@@ -361,7 +362,7 @@ fun gameScene(): Scene = scene("Game")
                     println("Collision with pipe!")
                     gameOver = true
 
-                    SceneManager.gameSceneUIGameOver?.isVisible=true;
+                    SceneManager.gameSceneUIGameOver?.isVisible = true;
                     break
                 }
             }
@@ -375,13 +376,10 @@ fun gameScene(): Scene = scene("Game")
 
             if (!pair.scored && pipeRight < birdLeft) {
                 pair.scored = true
-                score++
+                score = score + 1
+                scoreText.set(score.toString())
                 println("Score: $score")
-                GameUI.scoreLabel?.Text {
-                    modifier.text = score.toString()
-                }
             }
-
         }
     }
 }
