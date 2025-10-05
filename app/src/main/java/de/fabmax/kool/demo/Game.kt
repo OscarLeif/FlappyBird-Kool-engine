@@ -3,8 +3,10 @@ package de.fabmax.kool.demo
 
 import de.fabmax.kool.Assets
 import de.fabmax.kool.input.Input
+import de.fabmax.kool.loadAudioClip
 import de.fabmax.kool.loadTexture2d
 import de.fabmax.kool.math.deg
+import de.fabmax.kool.modules.audio.AudioClip
 import de.fabmax.kool.modules.ksl.KslUnlitShader
 import de.fabmax.kool.modules.ui2.AlignmentX
 import de.fabmax.kool.modules.ui2.AlignmentY
@@ -31,13 +33,11 @@ import de.fabmax.kool.scene.addTextureMesh
 import de.fabmax.kool.scene.scene
 import de.fabmax.kool.util.Time
 import kotlinx.coroutines.launch
-import de.fabmax.kool.modules.ui2.TextScope
 import de.fabmax.kool.modules.ui2.alignY
 import de.fabmax.kool.modules.ui2.background
 import de.fabmax.kool.modules.ui2.font
 import de.fabmax.kool.modules.ui2.mutableStateOf
 import de.fabmax.kool.modules.ui2.textColor
-import de.fabmax.kool.toString
 import de.fabmax.kool.util.MsdfFont
 
 var gameGroundMeshes = mutableListOf<Mesh>()
@@ -59,23 +59,28 @@ var gameStarted: Boolean = false
 var idleTimer = 0f
 
 val groundLevel = -25.6f + groundHeight / 2f
-var gameOver=false
-var playerHit=false
+var gameOver = false
+var playerHit = false
 
 val pipeWidth = 5.2f
 val pipeHeight = 32f
- var birdRef: Node? = null
+var birdRef: Node? = null
 
 val pipeMeshes = mutableListOf<Mesh>()
 val pipeGap = 12f          // vertical gap between top and bottom pipe
 val pipeSpacing = 35f      // horizontal distance between pipe pairs
 
-var pipeTex: Texture2d?=null
+var pipeTex: Texture2d? = null
 
 data class PipePair(val bottom: Node, val top: Node, var scored: Boolean = false)
+
 val pipePairs = mutableListOf<PipePair>()
 var scoreText = mutableStateOf("")
 var score = 0
+
+lateinit var flapAudioClip: AudioClip
+lateinit var pointAudioClip: AudioClip
+lateinit var hitAudioClip: AudioClip
 
 //object GameUI {
 //    var scoreLabel: TextScope? = null
@@ -109,8 +114,17 @@ fun gameHudScene(): Scene = UiScene("GameHud") {
 
 fun gameOverPanel(): Scene = UiScene("GameOverUI") {
     coroutineScope.launch {
-        val replayTex = loadUiTexture("sprites/play_btn.png")
-        val homeTex = loadUiTexture("sprites/play_btn.png")
+        val replayTex = loadTexture("sprites/play_btn.png")
+        val homeTex = loadTexture("sprites/play_btn.png")
+        flapAudioClip = Assets.loadAudioClip("audio/wing.ogg").getOrThrow()
+        val result = Assets.loadAudioClip("audio/hit.ogg")
+            .onSuccess { clip ->
+                hitAudioClip = clip
+            }
+            .onFailure { e ->
+                println("Failed to load sound: ${e.message}")
+            }
+        pointAudioClip = Assets.loadAudioClip("audio/point.ogg").getOrThrow()
 
         addPanelSurface {
             modifier
@@ -192,7 +206,7 @@ fun gameScene(): Scene = scene("Game")
 //    defaultOrbitCamera()
 
     gameOver = false
-    gameStarted=false
+    gameStarted = false
     pipeMeshes.clear()
     pipePairs.clear()
     gameGroundMeshes.clear()
@@ -245,13 +259,14 @@ fun gameScene(): Scene = scene("Game")
                     color { textureColor(scrollLandTex) }
                 }
             }
-            ground.transform.translate(i * groundWidth - groundWidth / 2, -25.6f, 0f)
+            ground.transform.translate(i * groundWidth - groundWidth / 2, -25.6f, 1f)
             gameGroundMeshes += ground
         }
 
-        val frame1Tex = loadUiTexture("sprites/yellowbird-midflap.png")
-        val frame2Tex = loadUiTexture("sprites/yellowbird-upflap.png")
-        val frame3Tex = loadUiTexture("sprites/yellowbird-downflap.png")
+
+        val frame1Tex = loadTexture("sprites/yellowbird-upflap.png")
+        val frame2Tex = loadTexture("sprites/yellowbird-midflap.png")
+        val frame3Tex = loadTexture("sprites/yellowbird-downflap.png")
 
         birdFrames = listOf(frame1Tex, frame2Tex, frame3Tex)
 
@@ -287,6 +302,9 @@ fun gameScene(): Scene = scene("Game")
         val dt = Time.deltaT
         val p0 = Input.pointer.primaryPointer
         if (!gameOver && p0.isAnyButtonClicked) {
+
+            flapAudioClip.play()
+
             if (!gameStarted) {
                 gameStarted = true
                 velocity = flapStrength
@@ -327,8 +345,11 @@ fun gameScene(): Scene = scene("Game")
         if (birdY - birdHeight / 2f <= groundLevel) {
             birdY = groundLevel + birdHeight / 2f   // snap bird onto ground
             velocity = 0f                           // stop falling
+            if(!gameOver) {
+                SceneManager.gameSceneUIGameOver?.isVisible = true;
+                hitAudioClip.play()
+            }
             gameOver = true                         // or trigger restart
-            SceneManager.gameSceneUIGameOver?.isVisible = true;
         }
         birdRef?.transform?.setPosition(groundWidth * -0.25f, birdY, 1f)
         val iterator = pipeMeshes.iterator()
@@ -366,25 +387,40 @@ fun gameScene(): Scene = scene("Game")
                 if (birdRect.intersects(pipeRect)) {
                     println("Collision with pipe!")
                     gameOver = true
-
+                    hitAudioClip.play()
                     SceneManager.gameSceneUIGameOver?.isVisible = true;
                     break
                 }
             }
-        }
 
-        val birdX = birdRef?.transform?.getTranslationF()?.x ?: (groundWidth * -0.25f)
-        val birdLeft = birdX - birdWidth * 0.5f
-        for (pair in pipePairs) {
-            val pipeX = pair.bottom.transform.getTranslationF().x
-            val pipeRight = pipeX + pipeWidth * 0.5f
 
-            if (!pair.scored && pipeRight < birdLeft) {
-                pair.scored = true
-                score = score + 1
-                scoreText.set(score.toString())
-                println("Score: $score")
+            val birdX = birdRef?.transform?.getTranslationF()?.x ?: (groundWidth * -0.25f)
+            val birdLeft = birdX - birdWidth * 0.5f
+            for (pair in pipePairs) {
+                val pipeX = pair.bottom.transform.getTranslationF().x
+                val pipeRight = pipeX + pipeWidth * 0.5f
+
+                if (!pair.scored && pipeRight < birdLeft) {
+                    pair.scored = true
+                    score = score + 1
+                    scoreText.set(score.toString())
+                    pointAudioClip.play()
+                    println("Score: $score")
+                }
             }
         }
+    }
+
+    suspend fun playFlapSound() {
+        val sound: Result<AudioClip> = Assets.loadAudioClip("assets/wing.ogg")
+        sound
+            .onSuccess { clip ->
+                clip.play()
+            }
+            .onFailure { e ->
+                println("Failed to load sound: ${e.message}")
+            }
+//        sound.getOrThrow().play()//the short version
+
     }
 }

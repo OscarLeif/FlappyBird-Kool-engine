@@ -1,58 +1,33 @@
 package de.fabmax.kool.demo
 
-import android.widget.Toast
 import de.fabmax.kool.Assets
 import de.fabmax.kool.loadTexture2d
-import de.fabmax.kool.math.Vec3d
-import de.fabmax.kool.math.Vec3f
-import de.fabmax.kool.math.deg
-import de.fabmax.kool.modules.ksl.KslPbrShader
 import de.fabmax.kool.modules.ksl.KslUnlitShader
 import de.fabmax.kool.modules.ui2.AlignmentX
 import de.fabmax.kool.modules.ui2.AlignmentY
-import de.fabmax.kool.modules.ui2.Button
-import de.fabmax.kool.modules.ui2.Colors
-import de.fabmax.kool.modules.ui2.Dimension
 import de.fabmax.kool.modules.ui2.Image
-import de.fabmax.kool.modules.ui2.RectBackground
 import de.fabmax.kool.modules.ui2.RoundRectBackground
 import de.fabmax.kool.modules.ui2.Row
-import de.fabmax.kool.modules.ui2.UiNode
-import de.fabmax.kool.modules.ui2.UiRenderer
 import de.fabmax.kool.modules.ui2.UiScene
 import de.fabmax.kool.modules.ui2.addPanelSurface
 import de.fabmax.kool.modules.ui2.align
 import de.fabmax.kool.modules.ui2.alignX
 import de.fabmax.kool.modules.ui2.alignY
 import de.fabmax.kool.modules.ui2.background
-import de.fabmax.kool.modules.ui2.font
 import de.fabmax.kool.modules.ui2.margin
 import de.fabmax.kool.modules.ui2.onClick
-import de.fabmax.kool.modules.ui2.padding
-import de.fabmax.kool.modules.ui2.setupUiScene
 import de.fabmax.kool.modules.ui2.size
-import de.fabmax.kool.pipeline.ClearColor
 import de.fabmax.kool.pipeline.MipMapping
 import de.fabmax.kool.pipeline.SamplerSettings
 import de.fabmax.kool.pipeline.TexFormat
 import de.fabmax.kool.pipeline.Texture2d
-import de.fabmax.kool.platform.KoolContextAndroid
-import de.fabmax.kool.platform.imageAtlasTextureData
 import de.fabmax.kool.scene.Mesh
 import de.fabmax.kool.scene.OrthographicCamera
 import de.fabmax.kool.scene.Scene
-import de.fabmax.kool.scene.addColorMesh
 import de.fabmax.kool.scene.addTextureMesh
-import de.fabmax.kool.scene.defaultOrbitCamera
 import de.fabmax.kool.scene.scene
-import de.fabmax.kool.scene.set
-import de.fabmax.kool.util.Color
-import de.fabmax.kool.util.MdColor
 import de.fabmax.kool.util.Time
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.newSingleThreadContext
-import kotlin.math.max
 
 val groundWidth = 33.6f   // scale of base.png (336px / 10)
 val groundHeight = 11.2f  // scale of base.png (112px / 10)
@@ -63,9 +38,10 @@ fun mainMenuSceneUI(): Scene = UiScene("MainMenuUI") {
     // setup UI layer
     //setupUiScene(Scene.DEFAULT_CLEAR_COLOR as ClearColor)
     coroutineScope.launch {
-        val playBtnTex = loadUiTexture("sprites/play_btn.png")
-        val leaderboardTex = loadUiTexture("sprites/leaderboard_btn.png")
-        val titleTex = loadUiTexture("sprites/title.png")
+
+        val playBtnTex = loadTexture("sprites/play_btn.png")
+        val leaderboardTex = loadTexture("sprites/leaderboard_btn.png")
+        val titleTex = loadTexture("sprites/title.png")
 
         addPanelSurface {
             val sizeX: Int = SceneManager.koolCtx.window.sizeOnScreen.x
@@ -73,9 +49,9 @@ fun mainMenuSceneUI(): Scene = UiScene("MainMenuUI") {
             val isLandscape = (sizeX > sizeY)
 
             var marginTop = 10.dp
-            if (isLandscape){
+            if (isLandscape) {
                 marginTop = 10.dp
-            }else{
+            } else {
                 marginTop = 160.dp
             }
 
@@ -106,10 +82,10 @@ fun mainMenuSceneUI(): Scene = UiScene("MainMenuUI") {
                 colorBg = RoundRectBackground(colors.background, 16.dp)
 
             var marginBottom = 85.dp
-            if(isLandscape)
-                marginBottom=50.dp
+            if (isLandscape)
+                marginBottom = 50.dp
             else
-                marginBottom=120.dp
+                marginBottom = 120.dp
 
             modifier
                 .size(width = 250.dp, height = 80.dp)
@@ -151,6 +127,7 @@ fun mainMenuScene(): Scene = scene("MainMenu") {
         setCentered(height = 51.2f, near = -100f, far = 100f)
     }
     camera.transform.setPosition(0f, 0f, -10f)
+    groundMeshes.clear()
 
     coroutineScope.launch {
         val bgTex = Assets.loadTexture2d(
@@ -190,6 +167,33 @@ fun mainMenuScene(): Scene = scene("MainMenu") {
             ground.transform.translate(i * groundWidth - groundWidth / 2, -20.6f, 0f)
             groundMeshes += ground
         }
+
+        //setup the bird
+        val frame1Tex = loadTexture("sprites/yellowbird-upflap.png")
+        val frame2Tex = loadTexture("sprites/yellowbird-midflap.png")
+        val frame3Tex = loadTexture("sprites/yellowbird-downflap.png")
+        birdFrames = listOf(frame1Tex, frame2Tex, frame3Tex)//
+
+        val birdRef = addTextureMesh {
+            generate {
+                rect { size.set(birdWidth, birdHeight) }
+            }
+            shader = KslUnlitShader {
+                color { textureColor(frame1Tex) }
+            }
+            onUpdate {
+                frameTimer += Time.deltaT
+                if (frameTimer >= frameDuration) {
+                    frameTimer = 0f
+                    frameIndex = (frameIndex + 1) % birdFrames.size
+                    (shader as KslUnlitShader).colorMap = birdFrames[frameIndex]
+                }
+                // idle bobbing animation
+                idleTimer += Time.deltaT
+                birdY = (groundHeight * 0.50f) + kotlin.math.sin(idleTimer * 5f) * 1.0f
+                transform.setPosition(0f, birdY, 1f)
+            }
+        }
     }
 
     // this is attached to the scene itself, so it runs every frame
@@ -217,7 +221,7 @@ fun mainMenuScene(): Scene = scene("MainMenu") {
     }
 }
 
-suspend fun loadUiTexture(path: String): Texture2d {
+suspend fun loadTexture(path: String): Texture2d {
     return Assets.loadTexture2d(
         assetPath = path,
         format = TexFormat.RGBA,
