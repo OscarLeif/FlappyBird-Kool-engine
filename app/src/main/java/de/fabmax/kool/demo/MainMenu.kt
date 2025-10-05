@@ -17,6 +17,8 @@ import de.fabmax.kool.modules.ui2.Image
 import de.fabmax.kool.modules.ui2.RectBackground
 import de.fabmax.kool.modules.ui2.RoundRectBackground
 import de.fabmax.kool.modules.ui2.Row
+import de.fabmax.kool.modules.ui2.UiNode
+import de.fabmax.kool.modules.ui2.UiRenderer
 import de.fabmax.kool.modules.ui2.UiScene
 import de.fabmax.kool.modules.ui2.addPanelSurface
 import de.fabmax.kool.modules.ui2.align
@@ -44,6 +46,7 @@ import de.fabmax.kool.scene.addTextureMesh
 import de.fabmax.kool.scene.defaultOrbitCamera
 import de.fabmax.kool.scene.scene
 import de.fabmax.kool.scene.set
+import de.fabmax.kool.util.Color
 import de.fabmax.kool.util.MdColor
 import de.fabmax.kool.util.Time
 import kotlinx.coroutines.coroutineScope
@@ -56,43 +59,71 @@ val groundHeight = 11.2f  // scale of base.png (112px / 10)
 val scrollSpeed = 10f     // units per second (tweak until it feels right)
 val groundMeshes = mutableListOf<Mesh>()
 
-fun mainMenuSceneUI(): Scene= UiScene("MainMenuUI"){
-        // setup UI layer
-        //setupUiScene(Scene.DEFAULT_CLEAR_COLOR as ClearColor)
+fun mainMenuSceneUI(): Scene = UiScene("MainMenuUI") {
+    // setup UI layer
+    //setupUiScene(Scene.DEFAULT_CLEAR_COLOR as ClearColor)
     coroutineScope.launch {
         val playBtnTex = loadUiTexture("sprites/play_btn.png")
         val leaderboardTex = loadUiTexture("sprites/leaderboard_btn.png")
-        val titleTex =loadUiTexture("sprites/title.png")
+        val titleTex = loadUiTexture("sprites/title.png")
 
         addPanelSurface {
+            val sizeX: Int = SceneManager.koolCtx.window.sizeOnScreen.x
+            val sizeY: Int = SceneManager.koolCtx.window.sizeOnScreen.y
+            val isLandscape = (sizeX > sizeY)
+
+            var marginTop = 10.dp
+            if (isLandscape){
+                marginTop = 10.dp
+            }else{
+                marginTop = 160.dp
+            }
 
             modifier
-                .size(300.dp, 100.dp)
+                .size(250.dp, 100.dp)
                 .align(AlignmentX.Center, AlignmentY.Top)
 //                .background(RoundRectBackground(colors.background, 16.dp))
                 .background(null) //transparent
+                .margin(top = marginTop)
 
             // Title at the top
             Image(titleTex) {
                 modifier
-                    .size(250.dp, 100.dp)
+                    .size(200.dp, 100.dp)
                     .alignX(AlignmentX.Center)
                     .margin(top = 16.dp, bottom = 24.dp)
             }
         }
 
         addPanelSurface {
+            //The play and leaderboard buttons
+            val sizeX: Int = SceneManager.koolCtx.window.sizeOnScreen.x
+            val sizeY: Int = SceneManager.koolCtx.window.sizeOnScreen.y
+            val isLandscape = (sizeX > sizeY)
+
+            var colorBg: RoundRectBackground? = null
+            if (isLandscape)
+                colorBg = RoundRectBackground(colors.background, 16.dp)
+
+            var marginBottom = 85.dp
+            if(isLandscape)
+                marginBottom=50.dp
+            else
+                marginBottom=120.dp
 
             modifier
-                .size(width  = 250.dp, height = 100.dp)
+                .size(width = 250.dp, height = 80.dp)
                 .alignX(AlignmentX.Center)
                 .alignY(AlignmentY.Bottom)
-                .margin(bottom = 48.dp)
+                .margin(bottom = marginBottom)
+//                .background(RoundRectBackground(colors.background, 16.dp))
+//                .background(colorBg)
+                .background(null)
 
             Row {
                 modifier
                     .align(AlignmentX.Center, AlignmentY.Bottom)
-                    //.spacing(16.dp)   // add gap between buttons
+                //.spacing(16.dp)   // add gap between buttons
 
                 Image(playBtnTex) {
                     modifier
@@ -111,16 +142,15 @@ fun mainMenuSceneUI(): Scene= UiScene("MainMenuUI"){
             }
         }
     }
-    }
+}
 
 fun mainMenuScene(): Scene = scene("MainMenu") {
     // this runs immediately when scene is created
 //    defaultOrbitCamera()
     camera = OrthographicCamera().apply {
-        setCentered(height = 51.2f, near = -100f,far = 100f)
+        setCentered(height = 51.2f, near = -100f, far = 100f)
     }
-    camera.transform.setPosition(0f,0f,-10f)
-
+    camera.transform.setPosition(0f, 0f, -10f)
 
     coroutineScope.launch {
         val bgTex = Assets.loadTexture2d(
@@ -157,7 +187,7 @@ fun mainMenuScene(): Scene = scene("MainMenu") {
                     color { textureColor(scrollLandTex) }
                 }
             }
-            ground.transform.translate(i * groundWidth - groundWidth / 2, -25.6f, 0f)
+            ground.transform.translate(i * groundWidth - groundWidth / 2, -20.6f, 0f)
             groundMeshes += ground
         }
     }
@@ -172,7 +202,7 @@ fun mainMenuScene(): Scene = scene("MainMenu") {
         //review if the position is not beyond the limit
         for (ground in groundMeshes) {
             //I assume the pivot is 0.5,0.5
-            if (ground.transform.getTranslationF().x < -groundWidth*2) {
+            if (ground.transform.getTranslationF().x < -groundWidth * 2) {
                 //search the fartest
                 var fartest = groundMeshes.first()
                 for (m in groundMeshes) {

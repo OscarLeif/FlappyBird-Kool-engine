@@ -33,9 +33,12 @@ import de.fabmax.kool.util.Time
 import kotlinx.coroutines.launch
 import de.fabmax.kool.modules.ui2.TextScope
 import de.fabmax.kool.modules.ui2.alignY
+import de.fabmax.kool.modules.ui2.background
+import de.fabmax.kool.modules.ui2.font
 import de.fabmax.kool.modules.ui2.mutableStateOf
 import de.fabmax.kool.modules.ui2.textColor
 import de.fabmax.kool.toString
+import de.fabmax.kool.util.MsdfFont
 
 var gameGroundMeshes = mutableListOf<Mesh>()
 val birdWidth = 3.24f
@@ -85,15 +88,17 @@ fun gameHudScene(): Scene = UiScene("GameHud") {
         //suppose to be the counter label
         addPanelSurface {
             modifier
-                .size(150.dp, 80.dp)
+                .size(150.dp, 60.dp)
                 .align(AlignmentX.Center, AlignmentY.Top)
                 .margin(top = 12.dp)
+                .background(null) //transparent
+
             //wait is this called every frame ?
             //score++;
             scoreText.set(score.toString())
             Text(scoreText.use()) {
                 modifier
-                    //.fontSize(32.dp)
+                    .font(MsdfFont(sizePts = 55f))
                     .textColor(colors.primary)
                     .alignX(AlignmentX.Center)
                     .alignY(AlignmentY.Center)
