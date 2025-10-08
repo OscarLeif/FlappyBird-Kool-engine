@@ -11,6 +11,18 @@ import de.fabmax.kool.modules.gltf.GltfLoadConfig
 import de.fabmax.kool.modules.gltf.GltfMaterialConfig
 import de.fabmax.kool.modules.gltf.loadGltfModel
 import de.fabmax.kool.modules.ksl.KslPbrShader
+import de.fabmax.kool.modules.ui2.AlignmentX
+import de.fabmax.kool.modules.ui2.AlignmentY
+import de.fabmax.kool.modules.ui2.FitContent
+import de.fabmax.kool.modules.ui2.Text
+import de.fabmax.kool.modules.ui2.UiScene
+import de.fabmax.kool.modules.ui2.addPanelSurface
+import de.fabmax.kool.modules.ui2.align
+import de.fabmax.kool.modules.ui2.background
+import de.fabmax.kool.modules.ui2.margin
+import de.fabmax.kool.modules.ui2.remember
+import de.fabmax.kool.modules.ui2.setupUiScene
+import de.fabmax.kool.modules.ui2.size
 import de.fabmax.kool.pipeline.MipMapping
 import de.fabmax.kool.pipeline.SamplerSettings
 import de.fabmax.kool.pipeline.TexFormat
@@ -59,13 +71,17 @@ class MainActivity : Activity() {
 
         SceneManager.mainMenuScene = mainMenuScene()
         SceneManager.mainMenuUI= mainMenuSceneUI()
-
+//
         koolCtx.scenes += SceneManager.mainMenuScene!!
         koolCtx.scenes += SceneManager.mainMenuUI!!
 
-        val dbgOv = DebugOverlay()
-        dbgOv.isExpanded.set(true)
-        koolCtx.scenes += dbgOv.ui
+
+//        val dbgOv = DebugOverlay()
+//        dbgOv.isExpanded.set(true)
+//        koolCtx.scenes += dbgOv.ui
+
+//        koolCtx.scenes += testScene()
+        koolCtx.scenes += fpsCounterScene()
 
         koolCtx.run()
         return koolCtx
@@ -78,6 +94,25 @@ class MainActivity : Activity() {
             val ibl = loadHdri("shanghai_bund_1k.rgbe.png")
             teapot(ibl)
             addNode(Skybox.cube(ibl.reflectionMap, 2f))
+        }
+    }
+
+    fun fpsCounterScene():Scene=UiScene {
+        coroutineScope.launch {
+            setupUiScene()
+            addPanelSurface {
+                modifier
+                    .size(FitContent, FitContent)
+                    .align(AlignmentX.End, AlignmentY.Top)
+                    .background(null)
+                var fps by remember("0")
+                Text(fps) {
+                    modifier.margin(sizes.smallGap)
+                }
+                onUpdate {
+                    fps = "${Time.fps.toInt()}"
+                }
+            }
         }
     }
 
